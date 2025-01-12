@@ -12,9 +12,8 @@ import AddEditProduct from "./pages/Products/AddEditProduct";
 import ThemesPage from "./pages/Appearance/ThemesPage";
 import CustomizeThemePage from "./pages/Appearance/CustomizeThemePage";
 import DeliveryPage from "./pages/Delivery/DeliveryPage";
-// import AnalyticsPage from "./pages/Analytics/AnalyticsPage";
-// import DiscountsPage from "./pages/Discounts/DiscountsPage";
-// import AudiencePage from "./pages/Audience/AudiencePage";
+import AnalyticsPage from "./pages/Analytics/AnalyticsPage";
+import AudiencePage from "./pages/Audience/AudiencePage";
 // import SettingsPage from "./pages/Settings/SettingsPage";
 
 const App = () => {
@@ -43,9 +42,8 @@ const App = () => {
           </Route>
 
           <Route path="delivery" element={<DeliveryPage />} />
-          {/*x<Route path="analytics" element={<AnalyticsPage />} />
-          <Route path="discounts" element={<DiscountsPage />} />
-          <Route path="audience" element={<AudiencePage />} /> */}
+          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="audience" element={<AudiencePage />} /> 
 
           <Route path="appearance">
             <Route path="themes" element={<ThemesPage />} />

@@ -19,11 +19,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     { path: "/orders", icon: FaBox, text: "Orders" },
     { path: "/delivery", icon: FaTruck, text: "Delivery PA" },
     { path: "/products", icon: FaStore, text: "Products" },
-    // { path: "/analytics", icon: FaChartBar, text: "Analytics" },
-    // { path: "/discounts", icon: FaPercentage, text: "Discounts" },
-    // { path: "/audience", icon: FaUsers, text: "Audience" },
+    { path: "/analytics", icon: FaChartBar, text: "Analytics" },
+    { path: "/audience", icon: FaUsers, text: "Audience" },
     { path: "/appearance/themes", icon: FaPalette, text: "Appearance" },
-    // { path: "/settings", icon: FaCog, text: "Settings" },
+    { path: "/settings", icon: FaCog, text: "Settings" },
   ];
 
   return (
