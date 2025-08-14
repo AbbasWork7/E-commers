@@ -1,214 +1,140 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  FaSearch,
-  FaTimes,
-  FaQuestionCircle,
-  FaBell,
-  FaEllipsisV,
-  FaDownload,
-  FaCalendarAlt,
+  FaSearch, FaBell, FaEllipsisV, FaDownload, FaCalendarAlt
 } from "react-icons/fa";
+import "../Audience/Audience.css";  // External CSS
 
 const AudienceManagement = () => {
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const customers = [
-    {
-      name: "Dharshan",
-      mobile: "+91-9600733080",
-      email: "antojoel8020@gmail.com",
-      city: "Kamrup",
-      totalOrders: 1,
-    },
-  ];
+  useEffect(() => {
+    fetch("http://localhost:5004/api/customers")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Fetched customers:", data); // Debug
+        setCustomers(data);
+      })
+      .catch((err) => console.error("Failed to fetch customers", err));
+  }, []);
 
-  const AddCustomerModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg p-6 w-96">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-medium">Customer details</h2>
-          <button onClick={() => setShowAddCustomerModal(false)}>
-            <FaTimes className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
+  const handleAddCustomer = () => {
+    const newCustomer = {
+      name: "New Customer",
+      mobile: "+91-9000000000",
+      email: "new@example.com",
+      city: "New City",
+      totalOrders: 0,
+    };
+    setCustomers([...customers, newCustomer]);
+    setShowAddCustomerModal(false);
+  };
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1">Name</label>
-            <input
-              type="text"
-              placeholder="Enter customer name"
-              className="w-full p-2 border rounded-md"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">Email address</label>
-            <input
-              type="email"
-              placeholder="Enter email address"
-              className="w-full p-2 border rounded-md"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">Mobile number</label>
-            <div className="flex border rounded-md">
-              <div className="flex items-center px-2 border-r">
-                <img
-                  src="/api/placeholder/20/15"
-                  alt="IN flag"
-                  className="mr-1"
-                />
-                <span>+91</span>
-              </div>
-              <input
-                type="tel"
-                placeholder="0123456789"
-                className="flex-1 p-2"
-              />
-            </div>
-          </div>
-
-          <button className="w-full bg-blue-100 text-blue-600 py-2 rounded-md mt-4">
-            Add customer
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const ImportModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg p-6 w-96">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-medium">
-            Import customers by Excel file
-          </h2>
-          <button onClick={() => setShowImportModal(false)}>
-            <FaTimes className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
-
-        <p className="text-sm mb-4">
-          Download a{" "}
-          <a href="#" className="text-blue-500">
-            XLSX template
-          </a>{" "}
-          to see an example of the format required.
-        </p>
-
-        <div className="border-2 border-dashed rounded-lg p-8 text-center">
-          <button className="px-4 py-1 border rounded-md mb-2">Add file</button>
-          <p className="text-sm text-gray-500">or drag files to upload</p>
-        </div>
-
-        <button className="w-full bg-blue-100 text-blue-600 py-2 rounded-md mt-4">
-          Import
-        </button>
-      </div>
-    </div>
-  );
+  // Filter customers based on search query
+  const filteredCustomers = customers.filter((customer) => {
+    const search = searchQuery.toLowerCase();
+    return (
+      (customer.name && customer.name.toLowerCase().includes(search)) ||
+      (customer.email && customer.email.toLowerCase().includes(search)) ||
+      (customer.mobile && customer.mobile.toLowerCase().includes(search)) ||
+      (customer.city && customer.city.toLowerCase().includes(search))
+    );
+  });
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-medium">Audience</h1>
-          <FaQuestionCircle className="h-5 w-5 text-gray-500" />
-        </div>
-        <div className="flex items-center gap-4">
-          <FaBell className="h-5 w-5 text-gray-500" />
-          <div className="w-8 h-8 bg-gray-200 rounded-md"></div>
-          <FaEllipsisV className="h-5 w-5 text-gray-500" />
-        </div>
-      </div>
-
-      <div className="flex gap-4 mb-6">
-        <button className="px-4 py-1 bg-blue-50 text-blue-600 rounded-md flex items-center gap-2">
-          All{" "}
-          <span className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-            1
-          </span>
-        </button>
-        <button className="px-4 py-1 bg-gray-100 rounded-md flex items-center gap-2">
-          New{" "}
-          <span className="bg-gray-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-            1
-          </span>
-        </button>
-        <button className="px-4 py-1 bg-gray-100 rounded-md">Returning</button>
-        <button className="px-4 py-1 bg-gray-100 rounded-md">Imported</button>
-      </div>
-
-      <div className="flex justify-between mb-6">
-        <div className="relative">
-          <FaSearch className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Name, mobile, or a city..."
-            className="pl-9 pr-4 py-2 border rounded-md w-64"
-          />
-        </div>
-
-        <div className="flex gap-4">
-          <button
-            className="px-4 py-2 border rounded-md"
-            onClick={() => setShowAddCustomerModal(true)}
-          >
-            Add customer
-          </button>
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded-md"
-            onClick={() => setShowImportModal(true)}
-          >
-            Import customers
-          </button>
-          <button className="px-4 py-2 border rounded-md flex items-center gap-2">
-            <FaDownload className="h-4 w-4" />
-            Export
-          </button>
-          <button className="px-4 py-2 border rounded-md flex items-center gap-2">
-            <FaCalendarAlt className="h-4 w-4" />
-            Lifetime
-          </button>
+    <div className="audience-container">
+      {/* Header Section */}
+      <div className="audience-header">
+        <h1 className="audience-title">Audience</h1>
+        <div className="search-bar-container">
+          <div className="search-bar">
+            <FaSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="icon-group">
+            <FaBell />
+            <FaEllipsisV />
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border">
-        <table className="w-full">
+      {/* Action Buttons */}
+      <div className="action-buttons">
+        <button className="primary" onClick={() => setShowAddCustomerModal(true)}>Add Customer</button>
+        <button className="primary" onClick={() => setShowImportModal(true)}>Import</button>
+        <button className="primary"><FaDownload /> Export</button>
+        <button className="primary"><FaCalendarAlt /> Lifetime</button>
+      </div>
+
+      {/* Customer Table */}
+      <div className="table-container">
+        <table className="customer-table">
           <thead>
-            <tr className="border-b">
-              <th className="p-4 text-left w-8">
-                <input type="checkbox" />
-              </th>
-              <th className="p-4 text-left font-medium">Customer Name</th>
-              <th className="p-4 text-left font-medium">Mobile Number</th>
-              <th className="p-4 text-left font-medium">Email</th>
-              <th className="p-4 text-left font-medium">City</th>
-              <th className="p-4 text-left font-medium">Total Orders</th>
+            <tr>
+              <th>Customer Name</th>
+              <th>Mobile</th>
+              <th>Email</th>
+              <th>City</th>
+              <th>Total Orders</th>
             </tr>
           </thead>
           <tbody>
-            {customers.map((customer, index) => (
-              <tr key={index} className="border-b">
-                <td className="p-4">
-                  <input type="checkbox" />
-                </td>
-                <td className="p-4 text-blue-600">{customer.name}</td>
-                <td className="p-4">{customer.mobile}</td>
-                <td className="p-4">{customer.email}</td>
-                <td className="p-4">{customer.city}</td>
-                <td className="p-4">{customer.totalOrders}</td>
+            {filteredCustomers.length > 0 ? (
+              filteredCustomers.map((customer, index) => (
+                <tr key={index}>
+                  <td>{customer.name}</td>
+                  <td>{customer.mobile}</td>
+                  <td>{customer.email}</td>
+                  <td>{customer.city}</td>
+                  <td>{customer.totalOrders}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5">No matching customers found.</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
 
-      {showAddCustomerModal && <AddCustomerModal />}
-      {showImportModal && <ImportModal />}
+      {/* Add Customer Modal */}
+      {showAddCustomerModal && (
+        <div className="modal">
+          <div className="modal-content">
+            <h2>Add Customer</h2>
+            <input type="text" placeholder="Name" />
+            <input type="email" placeholder="Email" />
+            <input type="tel" placeholder="Mobile" />
+            <div className="modal-buttons">
+              <button className="cancel" onClick={() => setShowAddCustomerModal(false)}>Cancel</button>
+              <button className="confirm" onClick={handleAddCustomer}>Add</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="modal">
+          <div className="modal-content">
+            <h2>Import Customers</h2>
+            <p>Upload an Excel file to import customers.</p>
+            <button>Choose File</button>
+            <div className="modal-buttons">
+              <button className="cancel" onClick={() => setShowImportModal(false)}>Cancel</button>
+              <button className="confirm">Import</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

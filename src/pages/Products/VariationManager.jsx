@@ -32,7 +32,6 @@ const VariantManager = ({ onVariantChange, existingVariants = [] }) => {
   };
 
   const handleColorCodeChange = async (newColorCode) => {
-    // Validate hex code format
     if (!/^#[0-9A-F]{6}$/i.test(newColorCode)) {
       setError("Invalid color code format");
       return;
@@ -67,7 +66,6 @@ const VariantManager = ({ onVariantChange, existingVariants = [] }) => {
           ...prev,
           option2: [...prev.option2, colorValue],
         }));
-        // Reset inputs but keep color code for next color
         setColorName("");
         setIsCustomName(false);
         setError("");
@@ -94,7 +92,6 @@ const VariantManager = ({ onVariantChange, existingVariants = [] }) => {
 
   const handleAddVariation = () => {
     if (currentVariation.option1 && currentVariation.option2.length > 0) {
-      // Check if variation type already exists
       if (variations.some((v) => v.option1 === currentVariation.option1)) {
         setError("A variation with this type already exists");
         return;
@@ -104,7 +101,6 @@ const VariantManager = ({ onVariantChange, existingVariants = [] }) => {
       setVariations(newVariations);
       onVariantChange(newVariations);
 
-      // Reset all inputs
       setCurrentVariation({ option1: "", option2: [] });
       setCurrentOptionValue("");
       setColorName("");
@@ -140,11 +136,7 @@ const VariantManager = ({ onVariantChange, existingVariants = [] }) => {
         <div className="card-body">
           <h6 className="card-title">Add New Variation</h6>
 
-          {error && (
-            <div className="alert alert-danger mb-3" role="alert">
-              {error}
-            </div>
-          )}
+          {error && <div className="alert alert-danger mb-3">{error}</div>}
 
           <div className="mb-3">
             <label className="form-label">Option Type</label>
@@ -188,36 +180,33 @@ const VariantManager = ({ onVariantChange, existingVariants = [] }) => {
                               await handleColorCodeChange(colorCode);
                             }}
                             disabled={isLoadingColorName}
-                            title="Reset to auto-generated name"
                           >
                             ↺
                           </button>
                         )}
                       </div>
                     </div>
-                    <div className="col-sm-5">
-                      <div className="d-flex gap-2">
-                        <input
-                          type="color"
-                          className="form-control form-control-color"
-                          value={colorCode}
-                          onChange={(e) =>
-                            handleColorCodeChange(e.target.value)
-                          }
-                          title="Choose color"
-                          disabled={isLoadingColorName}
-                        />
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Color code"
-                          value={colorCode}
-                          onChange={(e) =>
-                            handleColorCodeChange(e.target.value)
-                          }
-                          disabled={isLoadingColorName}
-                        />
-                      </div>
+                    <div className="col-sm-5 d-flex gap-2">
+                      <input
+                        type="color"
+                        className="form-control form-control-color"
+                        value={colorCode}
+                        onChange={(e) =>
+                          handleColorCodeChange(e.target.value)
+                        }
+                        title="Choose color"
+                        disabled={isLoadingColorName}
+                      />
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Color code"
+                        value={colorCode}
+                        onChange={(e) =>
+                          handleColorCodeChange(e.target.value)
+                        }
+                        disabled={isLoadingColorName}
+                      />
                     </div>
                     <div className="col-sm-2">
                       <button
@@ -232,15 +221,6 @@ const VariantManager = ({ onVariantChange, existingVariants = [] }) => {
                         Add
                       </button>
                     </div>
-                  </div>
-                  <div className="mt-2">
-                    <small className="text-muted">
-                      {isLoadingColorName
-                        ? "Loading color name..."
-                        : isCustomName
-                        ? "Using custom color name"
-                        : "Color name is auto-generated. Edit to customize."}
-                    </small>
                   </div>
                 </div>
               ) : (
@@ -262,7 +242,6 @@ const VariantManager = ({ onVariantChange, existingVariants = [] }) => {
                 </div>
               )}
 
-              {/* Current Values Display */}
               {currentVariation.option2.length > 0 && (
                 <div className="d-flex flex-wrap gap-2 mt-3">
                   {currentVariation.option2.map((value, index) => {
@@ -315,7 +294,6 @@ const VariantManager = ({ onVariantChange, existingVariants = [] }) => {
         </div>
       </div>
 
-      {/* Existing Variations */}
       {variations.length > 0 && (
         <div className="card">
           <div className="card-body">

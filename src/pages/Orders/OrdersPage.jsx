@@ -1,4 +1,3 @@
-// src/pages/Orders/OrdersPage.jsx
 import React, { useState } from "react";
 import OrderTabs from "./components/OrderTabs";
 import OrdersTable from "./components/OrdersTable";
@@ -30,6 +29,12 @@ const OrdersPage = () => {
     ).length,
   };
 
+  // **Filter orders based on activeTab**
+  const filteredOrders =
+  activeTab === "all"
+    ? orders
+    : orders.filter((order) => order.status.toLowerCase() === activeTab.toLowerCase());
+
   if (error) {
     return (
       <div className="alert alert-danger m-4" role="alert">
@@ -52,12 +57,7 @@ const OrdersPage = () => {
         </button>
       </div>
 
-      {/* Order Tabs */}
-      <OrderTabs
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        tabCounts={tabCounts}
-      />
+      
 
       {/* Orders Table */}
       {isLoading ? (
@@ -68,7 +68,7 @@ const OrdersPage = () => {
         </div>
       ) : (
         <OrdersTable
-          orders={orders}
+          orders={filteredOrders}  // Pass only filtered orders
           selectedColumns={selectedColumns}
           activeTab={activeTab}
         />

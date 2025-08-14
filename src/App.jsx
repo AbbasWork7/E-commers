@@ -9,12 +9,13 @@ import OrderDetails from "./pages/Orders/OrderDetails";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import ProductsPage from "./pages/Products/ProductsPage";
 import AddEditProduct from "./pages/Products/AddEditProduct";
+import EditProductPage from "./pages/Products/EditProductPage";
 import ThemesPage from "./pages/Appearance/ThemesPage";
 import CustomizeThemePage from "./pages/Appearance/CustomizeThemePage";
 import DeliveryPage from "./pages/Delivery/DeliveryPage";
 import AnalyticsPage from "./pages/Analytics/AnalyticsPage";
 import AudiencePage from "./pages/Audience/AudiencePage";
-// import SettingsPage from "./pages/Settings/SettingsPage";
+import SettingsPage from "./pages/Settings/SettingsPage";
 
 const App = () => {
   return (
@@ -32,13 +33,14 @@ const App = () => {
 
           <Route path="orders">
             <Route index element={<OrdersPage />} />
-            <Route path=":orderId" element={<OrderDetails />} />
+            <Route path="new" element={<OrdersPage />} />
+            <Route path="/orders/:orderId" element={<OrderDetails />} />
           </Route>
 
           <Route path="products">
             <Route index element={<ProductsPage />} />
             <Route path="new" element={<AddEditProduct />} />
-            <Route path=":productId/edit" element={<AddEditProduct />} />
+            <Route path=":productId/edit" element={<EditProductPage />} />
           </Route>
 
           <Route path="delivery" element={<DeliveryPage />} />
@@ -53,7 +55,7 @@ const App = () => {
             />
           </Route>
 
-          {/* <Route path="settings" element={<SettingsPage />} /> */}
+          { <Route path="settings" element={<SettingsPage />} /> }
         </Route>
       </Routes>
     </BrowserRouter>

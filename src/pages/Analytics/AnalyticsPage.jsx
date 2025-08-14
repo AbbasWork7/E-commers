@@ -1,4 +1,9 @@
 import React, { useState } from "react";
+import axios from "axios";
+import { useEffect } from "react";
+import { jsPDF } from "jspdf";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap/dist/js/bootstrap.bundle.min";
 import {
   LineChart,
   Line,
@@ -23,15 +28,7 @@ import {
   FaRupeeSign,
 } from "react-icons/fa";
 
-// Sample data - Replace with actual API data
-const revenueData = [
-  { month: "Jan", revenue: 45000, orders: 150 },
-  { month: "Feb", revenue: 52000, orders: 170 },
-  { month: "Mar", revenue: 49000, orders: 160 },
-  { month: "Apr", revenue: 58000, orders: 190 },
-  { month: "May", revenue: 55000, orders: 180 },
-  { month: "Jun", revenue: 62000, orders: 200 },
-];
+
 
 const categoryData = [
   { name: "Electronics", value: 35 },
@@ -41,24 +38,122 @@ const categoryData = [
   { name: "Others", value: 5 },
 ];
 
+
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
 const AnalyticsPage = () => {
   const [dateRange, setDateRange] = useState("month");
+  const [analytics, setAnalytics] = useState({
+    totalRevenue: null,
+    totalOrders: null,
+    avgOrderValue: null, // Add this
+  });
+  const [revenueData, setRevenueData] = useState([]);
+  useEffect(() => {
+    axios
+      .get(`http://localhost:5004/api/analytics?dateRange=${dateRange}`)
+      .then((response) => {
+        console.log("API Response:", response.data);
+
+        const totalRevenue = response.data.totalRevenue || 0;
+        const totalOrders = response.data.totalOrders || 1; // Avoid division by zero
+        const avgOrderValue = totalOrders > 0 ? Number((totalRevenue / totalOrders).toFixed(2)) : 0;
+
+        // **Retrieve previous period values**
+        const prevTotalRevenue = response.data.prevTotalRevenue || 0;
+        const prevTotalOrders = response.data.prevTotalOrders || 1;
+        const prevAvgOrderValue = prevTotalOrders > 0 ? Number((prevTotalRevenue / prevTotalOrders).toFixed(2)) : 0;
+
+        // **Calculate Percentage Change**
+        const revenueChange = prevTotalRevenue 
+          ? (((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100).toFixed(2) 
+          : 0;
+
+        const ordersChange = prevTotalOrders 
+          ? (((totalOrders - prevTotalOrders) / prevTotalOrders) * 100).toFixed(2) 
+          : 0;
+
+        const avgOrderChange = prevAvgOrderValue 
+          ? (((avgOrderValue - prevAvgOrderValue) / prevAvgOrderValue) * 100).toFixed(2) 
+          : 0;
+
+        setAnalytics({
+          totalRevenue: `₹${Number(totalRevenue).toLocaleString()}`,
+          totalOrders: totalOrders,
+          avgOrderValue: `₹${Number(avgOrderValue).toLocaleString()}`,
+          revenueChange: response.data.revenueChange + "%",  // ✅ Use API value
+          ordersChange: response.data.ordersChange + "%",    // ✅ Use API value
+          avgOrderChange,
+        });
+
+        // Ensure all months are present in the data
+        const allMonths = [
+          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        ];
+
+        // Create a map from API response for easy lookup
+        const revenueMap = new Map(response.data.revenueOverview?.map(item => [item.month, item]));
+
+        // Fill missing months with zero revenue/orders
+        const completeRevenueData = allMonths.map(month =>
+          revenueMap.get(month) || { month, revenue: 0, orders: 0 }
+        );
+
+        setRevenueData(completeRevenueData);
+      })
+      .catch((error) => {
+        console.error("Error fetching analytics:", error);
+        setAnalytics({
+          totalRevenue: "₹0",
+          totalOrders: 0,
+          avgOrderValue: "₹0",
+          revenueChange: 0,
+          ordersChange: 0,
+          avgOrderChange: 0,
+        });
+        setRevenueData([]);
+      });
+  }, [dateRange]);
+
+
+
 
   const stats = {
-    totalRevenue: "₹3,21,000",
-    totalOrders: 1050,
-    avgOrderValue: "₹3,057",
     activeUsers: 824,
     conversionRate: "3.2%",
     returnRate: "2.1%",
   };
 
+
+
   const downloadAnalytics = (format) => {
-    // Implementation for downloading analytics in CSV/PDF format
-    console.log(`Downloading analytics in ${format} format`);
+    if (format === "pdf") {
+      console.log("Downloading PDF...");
+      const doc = new jsPDF();
+
+      // Title
+      doc.setFontSize(18);
+      doc.text("Analytics Report", 20, 20);
+
+      // Revenue and Orders
+      doc.setFontSize(14);
+      doc.text(`Total Revenue: ${analytics.totalRevenue}`, 20, 40);
+      doc.text(`Total Orders: ${analytics.totalOrders}`, 20, 50);
+      doc.text(`Average Order Value: ${analytics.avgOrderValue}`, 20, 60);
+
+      // Additional Metrics
+      doc.text(`Active Users: ${stats.activeUsers}`, 20, 80);
+      doc.text(`Conversion Rate: ${stats.conversionRate}`, 20, 90);
+      doc.text(`Return Rate: ${stats.returnRate}`, 20, 100);
+
+      // Save the PDF
+      doc.save("analytics.pdf");
+    }
   };
+
+
+
 
   return (
     <div className="container-fluid p-4">
@@ -70,58 +165,35 @@ const AnalyticsPage = () => {
         </div>
         <div className="d-flex gap-2">
           <div className="btn-group">
-            <button
-              className={`btn ${
-                dateRange === "week" ? "btn-dark" : "btn-outline-dark"
-              }`}
-              onClick={() => setDateRange("week")}
-            >
+            <button className={`btn ${dateRange === "week" ? "btn-dark" : "btn-outline-dark"}`} onClick={() => setDateRange("week")}>
               Week
             </button>
-            <button
-              className={`btn ${
-                dateRange === "month" ? "btn-dark" : "btn-outline-dark"
-              }`}
-              onClick={() => setDateRange("month")}
-            >
+            <button className={`btn ${dateRange === "month" ? "btn-dark" : "btn-outline-dark"}`} onClick={() => setDateRange("month")}>
               Month
             </button>
-            <button
-              className={`btn ${
-                dateRange === "year" ? "btn-dark" : "btn-outline-dark"
-              }`}
-              onClick={() => setDateRange("year")}
-            >
+            <button className={`btn ${dateRange === "year" ? "btn-dark" : "btn-outline-dark"}`} onClick={() => setDateRange("year")}>
               Year
             </button>
           </div>
           <div className="dropdown">
             <button
               className="btn btn-outline-primary dropdown-toggle"
+              type="button"
               data-bs-toggle="dropdown"
+              aria-expanded="false"
             >
               <FaDownload className="me-2" />
               Download
             </button>
             <ul className="dropdown-menu">
               <li>
-                <button
-                  className="dropdown-item"
-                  onClick={() => downloadAnalytics("csv")}
-                >
-                  CSV
-                </button>
-              </li>
-              <li>
-                <button
-                  className="dropdown-item"
-                  onClick={() => downloadAnalytics("pdf")}
-                >
+                <button className="dropdown-item" onClick={() => downloadAnalytics("pdf")}>
                   PDF
                 </button>
               </li>
             </ul>
           </div>
+
         </div>
       </div>
 
@@ -136,10 +208,13 @@ const AnalyticsPage = () => {
                 </div>
                 <div>
                   <h6 className="text-muted mb-1">Total Revenue</h6>
-                  <h4 className="mb-0">{stats.totalRevenue}</h4>
+                  <h4 className="mb-0">{analytics.totalRevenue || "Loading..."}</h4>
                 </div>
               </div>
-              <div className="text-success small">+8.3% from last month</div>
+              <div className="text-success small">
+                {analytics.revenueChange >= 0 ? "+" : ""}
+                {analytics.revenueChange}% from last {dateRange}
+              </div>
             </div>
           </div>
         </div>
@@ -153,10 +228,13 @@ const AnalyticsPage = () => {
                 </div>
                 <div>
                   <h6 className="text-muted mb-1">Total Orders</h6>
-                  <h4 className="mb-0">{stats.totalOrders}</h4>
+                  <h4 className="mb-0">{analytics.totalOrders !== null ? analytics.totalOrders : "Loading..."}</h4>
                 </div>
               </div>
-              <div className="text-success small">+12.5% from last month</div>
+              <div className="text-success small">
+                {analytics.ordersChange >= 0 ? "+" : ""}
+                {analytics.ordersChange}% from last {dateRange}
+              </div>
             </div>
           </div>
         </div>
@@ -194,18 +272,8 @@ const AnalyticsPage = () => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#0088FE"
-                      strokeWidth={2}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="orders"
-                      stroke="#00C49F"
-                      strokeWidth={2}
-                    />
+                    <Line type="monotone" dataKey="revenue" stroke="#0088FE" strokeWidth={2} />
+                    <Line type="monotone" dataKey="orders" stroke="#00C49F" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -254,9 +322,10 @@ const AnalyticsPage = () => {
                 <div className="col-md-4">
                   <div className="border rounded p-3">
                     <h6 className="text-muted">Average Order Value</h6>
-                    <h3>{stats.avgOrderValue}</h3>
+                    <h3>{analytics.avgOrderValue || "Loading..."}</h3>
                     <div className="text-success small">
-                      +4.5% from last month
+                      {analytics.avgOrderChange >= 0 ? "+" : ""}
+                      {analytics.avgOrderChange}% from last {dateRange}
                     </div>
                   </div>
                 </div>
@@ -287,4 +356,4 @@ const AnalyticsPage = () => {
   );
 };
 
-export default AnalyticsPage;
+export default AnalyticsPage; 

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   LineChart,
   Line,
@@ -10,21 +10,58 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-
 import { useNavigate } from "react-router-dom";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const [salesData, setSalesData] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [stats, setStats] = useState({
+    totalSales: "Loading...",
+    totalOrders: 0,
+    avgOrderValue: "Loading...",
+    conversionRate: "Loading...",
+  });
+  const [selectedPeriod, setSelectedPeriod] = useState("week"); // Default to "week"
 
-  const salesData = [
-    { date: "Mon", sales: 2400, orders: 24 },
-    { date: "Tue", sales: 1398, orders: 13 },
-    { date: "Wed", sales: 9800, orders: 98 },
-    { date: "Thu", sales: 3908, orders: 39 },
-    { date: "Fri", sales: 4800, orders: 48 },
-    { date: "Sat", sales: 3800, orders: 38 },
-    { date: "Sun", sales: 4300, orders: 43 },
-  ];
+  useEffect(() => {
+    fetchDashboardData(selectedPeriod);
+  }, [selectedPeriod]);
+
+  const fetchDashboardData = (period) => {
+    // Fetch recent orders
+    fetch(`http://localhost:5004/api/recent-orders?period=${period}`)
+      .then((response) => response.json())
+      .then((data) => setRecentOrders(data))
+      .catch((error) => console.error("Error fetching orders:", error));
+
+      fetch(`http://localhost:5004/api/dashboard-metrics?period=${period}`)
+      .then((response) => response.json())
+      .then((data) => setStats(data))
+      .catch((error) => console.error("Error fetching metrics:", error));
+  
+    fetch(`http://localhost:5004/api/sales-data?period=${period}`)
+      .then((response) => response.json())
+      .then((data) => {
+        const completeData = fillMissingDates(data);
+        setSalesData(completeData);
+      })
+      .catch((error) => console.error("Error fetching sales data:", error));
+  };
+
+  const fillMissingDates = (data) => {
+    const lastDays = selectedPeriod === "month" ? 30 : 7;
+    const lastXDays = [];
+    for (let i = lastDays - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const formattedDate = date.toISOString().split("T")[0];
+
+      const existingData = data.find((item) => item.date === formattedDate);
+      lastXDays.push(existingData || { date: formattedDate, sales: 0 });
+    }
+    return lastXDays;
+  };
 
   const topProducts = [
     { name: "Product A", sales: 45 },
@@ -33,15 +70,6 @@ const DashboardPage = () => {
     { name: "Product D", sales: 25 },
     { name: "Product E", sales: 19 },
   ];
-
-  const stats = {
-    totalSales: "₹27,406",
-    totalOrders: 303,
-    avgOrderValue: "₹90.45",
-    conversionRate: "3.2%",
-    pendingOrders: 12,
-    returnRate: "2.1%",
-  };
 
   const quickActions = [
     { text: "Create New Order", path: "/orders/new" },
@@ -55,9 +83,15 @@ const DashboardPage = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Dashboard</h2>
         <div className="btn-group">
-          <button className="btn btn-outline-secondary">Today</button>
-          <button className="btn btn-outline-secondary active">Week</button>
-          <button className="btn btn-outline-secondary">Month</button>
+          {["today", "week", "month"].map((period) => (
+            <button
+              key={period}
+              className={`btn btn-outline-secondary ${selectedPeriod === period ? "active" : ""}`}
+              onClick={() => setSelectedPeriod(period)}
+            >
+              {period.charAt(0).toUpperCase() + period.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -77,7 +111,7 @@ const DashboardPage = () => {
             <div className="card-body">
               <h5 className="card-title text-muted mb-3">Avg. Order Value</h5>
               <h2 className="card-text mb-2">{stats.avgOrderValue}</h2>
-              <p className="text-success mb-0">↑ 2.4% vs last week</p>
+              <p className="text-success mb-0">↑ 2.4% vs last {selectedPeriod}</p>
             </div>
           </div>
         </div>
@@ -87,7 +121,7 @@ const DashboardPage = () => {
             <div className="card-body">
               <h5 className="card-title text-muted mb-3">Conversion Rate</h5>
               <h2 className="card-text mb-2">{stats.conversionRate}</h2>
-              <p className="text-danger mb-0">↓ 0.3% vs last week</p>
+              <p className="text-danger mb-0">↓ 0.3% vs last {selectedPeriod}</p>
             </div>
           </div>
         </div>
@@ -101,7 +135,13 @@ const DashboardPage = () => {
                   <LineChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
-                    <YAxis />
+                    <YAxis
+                    ticks={selectedPeriod === "month" ? [0, 20000, 40000, 60000, 80000] : [0, 25000, 50000, 75000, 100000]}
+                    tickFormatter={(value) => `₹${value}`}
+                    domain={[0, 'auto']}
+                    />
+
+
                     <Tooltip />
                     <Line type="monotone" dataKey="sales" stroke="#343a40" />
                   </LineChart>
@@ -145,36 +185,33 @@ const DashboardPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td>#18063027</td>
-                      <td>John Doe</td>
-                      <td>
-                        <span className="badge bg-success">Delivered</span>
-                      </td>
-                      <td>₹99</td>
-                    </tr>
-                    <tr>
-                      <td>#18063026</td>
-                      <td>Jane Smith</td>
-                      <td>
-                        <span className="badge bg-warning">Pending</span>
-                      </td>
-                      <td>₹149</td>
-                    </tr>
-                    <tr>
-                      <td>#18063025</td>
-                      <td>Mike Johnson</td>
-                      <td>
-                        <span className="badge bg-info">Shipped</span>
-                      </td>
-                      <td>₹299</td>
-                    </tr>
+                    {recentOrders.length > 0 ? (
+                      recentOrders.map((order) => (
+                        <tr key={order.order_id}>
+                          <td>{order.order_id}</td>
+                          <td>{order.customer_name}</td>
+                          <td>
+                            <span className={`badge bg-${getStatusColor(order.status)}`}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td>₹{order.grand_total}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="text-center">
+                          No recent orders
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
         </div>
+
 
         <div className="col-md-6">
           <div className="card">
@@ -197,10 +234,19 @@ const DashboardPage = () => {
               </div>
             </div>
           </div>
-        </div>
+          </div>
       </div>
     </div>
   );
+};
+
+const getStatusColor = (status) => {
+  switch (status.toLowerCase()) {
+    case "pending": return "warning";
+    case "completed": return "success";
+    case "cancelled": return "danger";
+    default: return "secondary";
+  }
 };
 
 export default DashboardPage;

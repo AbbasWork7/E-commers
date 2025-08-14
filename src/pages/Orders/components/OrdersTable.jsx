@@ -1,170 +1,137 @@
-// src/pages/Orders/components/OrdersTable.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
-const OrdersTable = ({ orders, selectedColumns }) => {
+const OrdersTable = () => {
+  const [orders, setOrders] = useState([]);
   const navigate = useNavigate();
-  const [sortConfig, setSortConfig] = useState({
-    key: "date",
-    direction: "desc",
-  });
+  const [activeTab, setActiveTab] = useState("all");
+  const [sortConfig, setSortConfig] = useState({ key: "order_date", direction: "desc" });
 
-  // Sorting function
+  useEffect(() => {
+    axios
+      .get("http://localhost:5004/api/v3/orders")
+      .then((response) => {
+        setOrders(response.data);
+      })
+      .catch((error) => console.error("Error fetching orders:", error.message));
+  }, []);
+
+  const filterOrdersByStatus = (data) => {
+    if (activeTab === "all") return data;
+    return data.filter((order) => order.status.toLowerCase() === activeTab.toLowerCase());
+  };
+
   const sortData = (data, sortKey, direction) => {
     return [...data].sort((a, b) => {
-      // Handle numeric values (amount, items)
-      if (sortKey === "amount") {
-        const aValue = parseFloat(a[sortKey].replace("₹", ""));
-        const bValue = parseFloat(b[sortKey].replace("₹", ""));
+      let aValue = a[sortKey];
+      let bValue = b[sortKey];
+
+      if (sortKey === "order_date") {
+        aValue = aValue ? new Date(aValue) : new Date(0);
+        bValue = bValue ? new Date(bValue) : new Date(0);
+      }
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
         return direction === "asc" ? aValue - bValue : bValue - aValue;
       }
 
-      if (sortKey === "items") {
-        return direction === "asc"
-          ? a[sortKey] - b[sortKey]
-          : b[sortKey] - a[sortKey];
-      }
-
-      // Handle string values
-      const aValue = String(a[sortKey]).toLowerCase();
-      const bValue = String(b[sortKey]).toLowerCase();
-
-      if (direction === "asc") {
-        return aValue.localeCompare(bValue);
-      }
-      return bValue.localeCompare(aValue);
+      return direction === "asc"
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
     });
   };
 
   const handleSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
   };
 
   const getSortIcon = (columnKey) => {
-    if (sortConfig.key !== columnKey) {
-      return <FaSort className="ms-1 text-muted" />;
-    }
-    return sortConfig.direction === "asc" ? (
-      <FaSortUp className="ms-1" />
-    ) : (
-      <FaSortDown className="ms-1" />
-    );
+    if (sortConfig.key !== columnKey) return <FaSort className="ms-1 text-muted" />;
+    return sortConfig.direction === "asc" ? <FaSortUp className="ms-1" /> : <FaSortDown className="ms-1" />;
   };
 
-  const sortedOrders = sortData(orders, sortConfig.key, sortConfig.direction);
+  const tabCounts = useMemo(() => {
+    const counts = orders.reduce(
+      (acc, order) => {
+        acc.all++;
+        acc[order.status.toLowerCase()] = (acc[order.status.toLowerCase()] || 0) + 1;
+        return acc;
+      },
+      { all: 0 }
+    );
+    return counts;
+  }, [orders]);
+
+  const filteredOrders = useMemo(() => filterOrdersByStatus(orders), [orders, activeTab]);
+  const sortedOrders = useMemo(
+    () => sortData(filteredOrders, sortConfig.key, sortConfig.direction),
+    [filteredOrders, sortConfig]
+  );
 
   return (
-    <div className="table-responsive">
-      <table className="table table-hover align-middle">
-        <thead>
-          <tr className="bg-light">
-            {selectedColumns["Order ID"] && (
-              <th
-                className="cursor-pointer"
-                onClick={() => handleSort("orderId")}
-              >
-                Order ID {getSortIcon("orderId")}
-              </th>
-            )}
-            {selectedColumns.Date && (
-              <th className="cursor-pointer" onClick={() => handleSort("date")}>
-                Date {getSortIcon("date")}
-              </th>
-            )}
-            {selectedColumns.Customer && (
-              <th
-                className="cursor-pointer"
-                onClick={() => handleSort("customer")}
-              >
-                Customer {getSortIcon("customer")}
-              </th>
-            )}
-            {selectedColumns.Items && (
-              <th
-                className="cursor-pointer"
-                onClick={() => handleSort("items")}
-              >
-                Items {getSortIcon("items")}
-              </th>
-            )}
-            {selectedColumns.Payment && (
-              <th
-                className="cursor-pointer"
-                onClick={() => handleSort("payment")}
-              >
-                Payment {getSortIcon("payment")}
-              </th>
-            )}
-            {selectedColumns.Status && (
-              <th
-                className="cursor-pointer"
-                onClick={() => handleSort("status")}
-              >
-                Status {getSortIcon("status")}
-              </th>
-            )}
-            {selectedColumns.Amount && (
-              <th
-                className="cursor-pointer"
-                onClick={() => handleSort("amount")}
-              >
-                Amount {getSortIcon("amount")}
-              </th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {sortedOrders.map((order) => (
-            <tr
-              key={order.orderId}
-              onClick={() =>
-                navigate(`/orders/${order.orderId.replace("#", "")}`)
-              }
-              className="cursor-pointer"
-            >
-              {selectedColumns["Order ID"] && (
-                <td className="text-primary">{order.orderId}</td>
-              )}
-              {selectedColumns.Date && <td>{order.date}</td>}
-              {selectedColumns.Customer && <td>{order.customer}</td>}
-              {selectedColumns.Items && <td>{order.items}</td>}
-              {selectedColumns.Payment && (
-                <td>
-                  <span className="badge bg-warning-subtle text-warning-emphasis">
-                    {order.payment}
-                  </span>
-                </td>
-              )}
-              {selectedColumns.Status && (
-                <td>
-                  <span
-                    className={`badge ${
-                      order.status === "Accepted"
-                        ? "bg-success-subtle text-success-emphasis"
-                        : order.status === "Pending"
-                        ? "bg-warning-subtle text-warning-emphasis"
-                        : "bg-info-subtle text-info-emphasis"
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-                </td>
-              )}
-              {selectedColumns.Amount && <td>{order.amount}</td>}
+    <div>
+      <div className="d-flex mb-3">
+        {["all", "pending", "accepted", "shipped", "delivered", "others"].map((tab) => (
+          <button
+            key={tab}
+            className={`btn ${activeTab === tab ? "btn-dark" : "btn-light"} me-2`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)} ({tabCounts[tab] || 0})
+          </button>
+        ))}
+      </div>
+
+      <div className="table-responsive">
+        <table className="table table-hover align-middle">
+          <thead>
+            <tr className="bg-light">
+              {['Order ID', 'Date', 'Customer', 'Items', 'Payment', 'Status'].map((col) => (
+                <th key={col} onClick={() => handleSort(col.toLowerCase().replace(' ', '_'))}>
+                  {col} {getSortIcon(col.toLowerCase().replace(' ', '_'))}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-      {sortedOrders.length === 0 && (
-        <div className="text-center py-5">
-          <p className="text-muted mb-0">No orders found</p>
-        </div>
-      )}
+          </thead>
+          <tbody>
+            {sortedOrders.length > 0 ? (
+              sortedOrders.map((order) => (
+                <tr
+  key={order.order_id}
+  onClick={() => {
+    console.log("Navigating to order:", order.order_id); // Debugging log
+    navigate(`/orders/${String(order.order_id).replace("#", "")}`);
+  }}
+  style={{ cursor: "pointer" }}
+>
+
+
+
+                  <td>{order.order_id}</td>
+                  <td>{order.order_date ? new Date(order.order_date).toLocaleDateString() : "N/A"}</td>
+                  <td>{order.customer_name || "Unknown"}</td>
+                  <td>{order.items ?? 0}</td>
+                  <td>{order.payment_method || "cd"}</td>
+                  <td>
+                    <span className={`badge bg-${order.status === 'pending' ? 'warning' : order.status === 'delivered' ? 'success' : order.status === 'shipped' ? 'info' : 'secondary'}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="6" className="text-center">No orders found</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

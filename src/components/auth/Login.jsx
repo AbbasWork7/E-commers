@@ -26,7 +26,7 @@ const Login = () => {
         { theme: "outline", size: "large", width: "100%" }
       );
     };
-
+5
     // Load Google Sign-In Script
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
@@ -65,7 +65,7 @@ const Login = () => {
         // Replace with actual OTP verification
         localStorage.setItem("token", "dummy-token");
         navigate("/");
-      } else {
+      } else {-2
         alert("Invalid OTP");
       }
     } else {

@@ -16,28 +16,26 @@ const AddEditProduct = () => {
   const navigate = useNavigate();
   const isEdit = !!productId;
 
-  // Form state
   const [formData, setFormData] = useState({
     name: "",
     category: "",
-    price: "",
-    discountedPrice: "",
-    shortDescription: "",
-    fullDescription: "",
-    tags: [],
     images: [],
-    inventory: {
-      quantity: "unlimited",
-      sku: "",
-      trackInventory: false,
-    },
-    variants: [],
-    seo: {
-      title: "",
-      description: "",
-      keywords: "",
-    },
+    regular_price: 0,
+    sale_price: 0,
+    track_inventory: false,
+    quantity: 0,
+    sku: "",
+    tags: [],
+    short_description: "",
+    full_description: "",
+    seo_title: "",        // ✅ Make sure SEO fields exist
+    seo_description: "",
+    seo_keywords: "",
+    inventory: { stock: 0 },  // Ensure inventory object exists
   });
+
+
+
 
   // UI state
   const [activeSection, setActiveSection] = useState("information");
@@ -46,55 +44,52 @@ const AddEditProduct = () => {
   const [errors, setErrors] = useState({});
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [currentTag, setCurrentTag] = useState("");
-
-  // Load product data if editing
   useEffect(() => {
-    const loadProduct = async () => {
-      if (productId) {
+    if (productId) {
+      const loadProduct = async () => {
         try {
-          // Replace with your API call
-          const response = await fetch(`/api/products/${productId}`);
-          const data = await response.json();
-          setFormData(data);
-        } catch (error) {
-          console.error("Error loading product:", error);
-        }
-      }
-    };
+          const response = await axios.get(`http://localhost:5004/api/products/${productId}`);
+          console.log("API Response:", response.data);
+          if (!response.data) return;
 
-    loadProduct();
+          setFormData((prev) => ({
+            ...prev,
+            ...response.data,
+            seo: {
+              title: response.data.seo_title || "",
+              description: response.data.seo_description || "",
+              keywords: response.data.seo_keywords || ""
+            },
+            inventory: {
+              stock: response.data.inventory?.stock ?? 0,
+              quantity: response.data.quantity ?? 0
+            }
+          }));
+        } catch (error) {
+          console.error("Error fetching product:", error.response?.data || error.message);
+        }
+      };
+      loadProduct();
+    }
   }, [productId]);
 
-  // Handlers
+
   const handleInputChange = (field, value, section = null) => {
-    setFormData((prev) => ({
-      ...prev,
-      [section ? section : field]: section
-        ? {
-            ...prev[section],
-            [field]: value,
-          }
-        : value,
-    }));
-    setIsDirty(true);
+    if (section) {
+      setFormData((prev) => ({
+        ...prev,
+        [section]: {
+          ...prev[section],  // ✅ Preserve existing data inside `seo`
+          [field]: value     // ✅ Update the specific `seo` field
+        }
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
   };
 
 
 
-  const handleImageInput = async (e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-  
-    const uploadedUrls = await Promise.all(
-      Array.from(files).map(file => handleImageUpload(file))
-    );
-  
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, ...uploadedUrls.filter(Boolean)] // only add successful uploads
-    }));
-  };
-  
 
   const handleTagAdd = (e) => {
     if (e.key === "Enter" && currentTag.trim()) {
@@ -112,125 +107,42 @@ const AddEditProduct = () => {
     );
   };
 
-  const handleImageUpload = async (event) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-  
-    const uploadedUrls = await Promise.all(
-      Array.from(files).map(async (file) => {
-        const formData = new FormData();
-        formData.append('image', file);
-  
-        try {
-          const response = await axios.post('http://localhost:5004/api/upload', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          });
-          return response.data.imageUrl; // Make sure this matches your backend response
-        } catch (error) {
-          console.error('Image upload failed:', error);
-          return null;
-        }
-      })
-    );
-  
-    // Filter null (failed uploads) and update form data
-    const successfulUploads = uploadedUrls.filter((url) => url !== null);
-  
-    setFormData((prevFormData) => ({
-      ...prevFormData,
-      images: [...prevFormData.images, ...successfulUploads]
-    }));
-  };
-  
-  
-  
-  
-  
-  const handleFileChange = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-  
-    const uploadedUrl = await handleImageUpload(file);
-    if (uploadedUrl) {
-      setFormData((prevData) => ({
-        ...prevData,
-        images: [...prevData.images, uploadedUrl],
-      }));
-    }
-  };
-  
-
-  const handleImageRemove = (index) => {
-    setFormData((prevFormData) => {
-      const updatedImages = [...prevFormData.images];
-      updatedImages.splice(index, 1);
-      return { ...prevFormData, images: updatedImages };
-    });
-  };
-  
-
-  const handleVariantAdd = (variantData) => {
-    handleInputChange("variants", [...formData.variants, variantData]);
-    setShowVariantModal(false);
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const newImages = files.map((file) => URL.createObjectURL(file));
+    handleInputChange("images", [...formData.images, ...newImages]);
   };
 
-  const handleVariantRemove = (indexToRemove) => {
+  const handleImageRemove = (indexToRemove) => {
     handleInputChange(
-      "variants",
-      formData.variants.filter((_, index) => index !== indexToRemove)
+      "images",
+      formData.images.filter((_, index) => index !== indexToRemove)
     );
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.name) newErrors.name = "Product name is required";
-    if (!formData.category) newErrors.category = "Category is required";
-    if (!formData.price) newErrors.price = "Price is required";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
 
   const handleSave = async () => {
     setIsSaving(true);
-  
-    const payload = {
-      name: formData.name,
-      category: formData.category,
-      tags: formData.tags,
-      shortDescription: formData.shortDescription,
-      fullDescription: formData.fullDescription,
-      images: formData.images, // already uploaded image URLs
-      price: formData.price,
-      discountedPrice: formData.discountedPrice,
-      trackInventory: formData.inventory.trackInventory,
-      quantity: formData.inventory.quantity,
-      sku: formData.inventory.sku,
-      variants: formData.variants,
-      seo: {
-        title: formData.seo.title,
-        description: formData.seo.description,
-        keywords: formData.seo.keywords
-      }
-    };
-  
-    try {
-      const response = await axios.post('http://localhost:5004/api/products', payload);
-      alert('Product saved successfully!');
-      navigate('/products');
-    } catch (error) {
-      console.error('Failed to save product:', error);
-      alert('Error saving product');
-    } finally {
+
+    const validationErrors = {};
+    if (!formData.name) validationErrors.name = "Product name is required.";
+    if (!formData.category) validationErrors.category = "Category is required.";
+    if (formData.regular_price <= 0) validationErrors.price = "Regular price must be positive.";
+
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
       setIsSaving(false);
+      return; // Prevent saving if validation fails
     }
+
+    // Proceed with saving...
   };
-  
-  
+
+
+
+
 
   return (
     <div className="container-fluid p-4">
@@ -257,7 +169,7 @@ const AddEditProduct = () => {
           </button>
           <button
             className="btn btn-primary d-flex align-items-center gap-2"
-            disabled={!isDirty || isSaving}
+            disabled={isSaving}  // ❌ Remove `!isDirty`
             onClick={handleSave}
           >
             {isSaving ? <FaSpinner className="spin" /> : <FaSave />}
@@ -271,49 +183,43 @@ const AddEditProduct = () => {
         <div className="col-md-3">
           <div className="list-group">
             <button
-              className={`list-group-item list-group-item-action ${
-                activeSection === "information" ? "active" : ""
-              }`}
+              className={`list-group-item list-group-item-action ${activeSection === "information" ? "active" : ""
+                }`}
               onClick={() => setActiveSection("information")}
             >
               Product Information
             </button>
             <button
-              className={`list-group-item list-group-item-action ${
-                activeSection === "media" ? "active" : ""
-              }`}
+              className={`list-group-item list-group-item-action ${activeSection === "media" ? "active" : ""
+                }`}
               onClick={() => setActiveSection("media")}
             >
               Media
             </button>
             <button
-              className={`list-group-item list-group-item-action ${
-                activeSection === "pricing" ? "active" : ""
-              }`}
+              className={`list-group-item list-group-item-action ${activeSection === "pricing" ? "active" : ""
+                }`}
               onClick={() => setActiveSection("pricing")}
             >
               Pricing
             </button>
             <button
-              className={`list-group-item list-group-item-action ${
-                activeSection === "inventory" ? "active" : ""
-              }`}
+              className={`list-group-item list-group-item-action ${activeSection === "inventory" ? "active" : ""
+                }`}
               onClick={() => setActiveSection("inventory")}
             >
               Inventory
             </button>
             <button
-              className={`list-group-item list-group-item-action ${
-                activeSection === "variants" ? "active" : ""
-              }`}
+              className={`list-group-item list-group-item-action ${activeSection === "variants" ? "active" : ""
+                }`}
               onClick={() => setActiveSection("variants")}
             >
               Variants
             </button>
             <button
-              className={`list-group-item list-group-item-action ${
-                activeSection === "seo" ? "active" : ""
-              }`}
+              className={`list-group-item list-group-item-action ${activeSection === "seo" ? "active" : ""
+                }`}
               onClick={() => setActiveSection("seo")}
             >
               SEO
@@ -333,9 +239,8 @@ const AddEditProduct = () => {
                     <label className="form-label">Product Name *</label>
                     <input
                       type="text"
-                      className={`form-control ${
-                        errors.name ? "is-invalid" : ""
-                      }`}
+                      className={`form-control ${errors.name ? "is-invalid" : ""
+                        }`}
                       value={formData.name}
                       onChange={(e) =>
                         handleInputChange("name", e.target.value)
@@ -351,9 +256,8 @@ const AddEditProduct = () => {
                     <label className="form-label">Category *</label>
                     <input
                       type="text"
-                      className={`form-control ${
-                        errors.category ? "is-invalid" : ""
-                      }`}
+                      className={`form-control ${errors.category ? "is-invalid" : ""
+                        }`}
                       value={formData.category}
                       onChange={(e) =>
                         handleInputChange("category", e.target.value)
@@ -396,7 +300,7 @@ const AddEditProduct = () => {
                     <textarea
                       className="form-control"
                       rows="3"
-                      value={formData.shortDescription}
+                      value={formData.short_description}
                       onChange={(e) =>
                         handleInputChange("shortDescription", e.target.value)
                       }
@@ -409,7 +313,7 @@ const AddEditProduct = () => {
                     <textarea
                       className="form-control"
                       rows="5"
-                      value={formData.fullDescription}
+                      value={formData.full_description}
                       onChange={(e) =>
                         handleInputChange("fullDescription", e.target.value)
                       }
@@ -476,10 +380,9 @@ const AddEditProduct = () => {
                         <span className="input-group-text">₹</span>
                         <input
                           type="number"
-                          className={`form-control ${
-                            errors.price ? "is-invalid" : ""
-                          }`}
-                          value={formData.price}
+                          className={`form-control ${errors.price ? "is-invalid" : ""
+                            }`}
+                          value={formData.regular_price}
                           onChange={(e) =>
                             handleInputChange("price", e.target.value)
                           }
@@ -497,7 +400,7 @@ const AddEditProduct = () => {
                         <input
                           type="number"
                           className="form-control"
-                          value={formData.discountedPrice}
+                          value={formData.sale_price}
                           onChange={(e) =>
                             handleInputChange("discountedPrice", e.target.value)
                           }
@@ -508,6 +411,7 @@ const AddEditProduct = () => {
                   </div>
                 </div>
               )}
+
 
               {/* Inventory Section */}
               {activeSection === "inventory" && (
@@ -557,15 +461,19 @@ const AddEditProduct = () => {
                     <input
                       type="text"
                       className="form-control"
-                      value={formData.inventory.sku}
+                      value={formData?.sku ?? ""}  // ✅ Ensure it's not undefined
                       onChange={(e) =>
-                        handleInputChange("sku", e.target.value, "inventory")
+                        setFormData((prev) => ({
+                          ...prev,
+                          sku: e.target.value
+                        }))
                       }
                       placeholder="Enter SKU"
                     />
                   </div>
                 </div>
               )}
+
 
               {/* Variants Section - Continued */}
               {activeSection === "variants" && (
@@ -590,10 +498,8 @@ const AddEditProduct = () => {
                     <input
                       type="text"
                       className="form-control"
-                      value={formData.seo.title}
-                      onChange={(e) =>
-                        handleInputChange("title", e.target.value, "seo")
-                      }
+                      value={formData.seo.title}   // ✅ No more `undefined` issues
+                      onChange={(e) => handleInputChange("title", e.target.value, "seo")}
                       placeholder="Enter meta title"
                     />
                     <small className="text-muted">
@@ -619,9 +525,7 @@ const AddEditProduct = () => {
                       className="form-control"
                       rows="3"
                       value={formData.seo.description}
-                      onChange={(e) =>
-                        handleInputChange("description", e.target.value, "seo")
-                      }
+                      onChange={(e) => handleInputChange("description", e.target.value, "seo")}
                       placeholder="Enter meta description"
                     ></textarea>
                     <small className="text-muted">
@@ -631,9 +535,8 @@ const AddEditProduct = () => {
                       <div
                         className="progress-bar"
                         style={{
-                          width: `${
-                            (formData.seo.description.length / 160) * 100
-                          }%`,
+                          width: `${(formData.seo.description.length / 160) * 100
+                            }%`,
                           backgroundColor:
                             formData.seo.description.length > 160
                               ? "#dc3545"
@@ -649,9 +552,7 @@ const AddEditProduct = () => {
                       type="text"
                       className="form-control"
                       value={formData.seo.keywords}
-                      onChange={(e) =>
-                        handleInputChange("keywords", e.target.value, "seo")
-                      }
+                      onChange={(e) => handleInputChange("keywords", e.target.value, "seo")}
                       placeholder="Separate keywords with commas"
                     />
                     <small className="text-muted">
